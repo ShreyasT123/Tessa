@@ -97,6 +97,11 @@ public static class LayoutEngine
             return [];
         }
 
+        if (inset.Height < count - 1)
+        {
+            return GridCells(area, count, 1, outer, inner);
+        }
+
         if (count == 1)
         {
             return [inset];
@@ -153,6 +158,11 @@ public static class LayoutEngine
         }
 
         var rows = (count + columns - 1) / columns;
+        if (inset.Width < columns || inset.Height < rows)
+        {
+            return Enumerable.Repeat(inset, count).ToArray();
+        }
+
         var rowGap = FittedGap(inset.Height, rows, inner);
         var rowHeight = Math.Max(1, (inset.Height - rowGap * (rows - 1)) / rows);
         var result = new List<RectI>(count);

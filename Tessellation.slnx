@@ -3,6 +3,7 @@
   <Project Path="Tessellation.Core/Tessellation.Core.csproj" />
   <Project Path="Tessellation.Input/Tessellation.Input.csproj" />
   <Project Path="Tessellation.Platform.Windows/Tessellation.Platform.Windows.csproj" />
+  <Project Path="Tessellation.Tests/Tessellation.Tests.csproj" />
   <Project Path="Tessy.UI/Tessy.UI.csproj">
     <Platform Project="x86" />
   </Project>

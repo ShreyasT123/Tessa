@@ -2,11 +2,12 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Tessellation.Core;
 
 namespace Tessellation.Platform.Windows;
 
-internal sealed class WindowRestoreJournal
+internal sealed partial class WindowRestoreJournal
 {
     private const uint SetWindowPosNoSizeOrder = 0x0004;
     private const uint SetWindowPosNoActivate = 0x0010;
@@ -17,7 +18,6 @@ internal sealed class WindowRestoreJournal
         "Tessellation",
         "window-restore.json");
 
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private readonly Dictionary<long, RestorableWindow> _windows = [];
     private bool _isDirty;
 
@@ -31,7 +31,9 @@ internal sealed class WindowRestoreJournal
         JournalSnapshot snapshot;
         try
         {
-            snapshot = JsonSerializer.Deserialize<JournalSnapshot>(File.ReadAllText(JournalPath))
+            snapshot = JsonSerializer.Deserialize(
+                File.ReadAllText(JournalPath),
+                JournalJsonContext.Default.JournalSnapshot)
                 ?? throw new InvalidDataException("The window restore journal is empty.");
         }
         catch (JsonException exception)
@@ -170,7 +172,10 @@ internal sealed class WindowRestoreJournal
                 bufferSize: 4096,
                 FileOptions.WriteThrough))
             {
-                JsonSerializer.Serialize(stream, new JournalSnapshot(_windows.Values.ToArray()), JsonOptions);
+                JsonSerializer.Serialize(
+                    stream,
+                    new JournalSnapshot(_windows.Values.ToArray()),
+                    JournalJsonContext.Default.JournalSnapshot);
                 stream.Flush(flushToDisk: true);
             }
 
@@ -247,6 +252,12 @@ internal sealed class WindowRestoreJournal
         long ProcessStartTimeUtcTicks,
         RectI Bounds,
         bool WasVisible);
+
+    [JsonSourceGenerationOptions(WriteIndented = true)]
+    [JsonSerializable(typeof(JournalSnapshot))]
+    private partial class JournalJsonContext : JsonSerializerContext
+    {
+    }
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]

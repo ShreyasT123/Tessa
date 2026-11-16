@@ -211,12 +211,12 @@ internal sealed class StatusBarWindow : Window
             {
                 Size = Marshal.SizeOf<AppBarData>(),
                 Window = _handle,
-                CallbackMessage = AppBarCallbackMessage,
-                Monitor = monitor
+                CallbackMessage = AppBarCallbackMessage
             };
             if (SHAppBarMessage(AppBarNew, ref registration) == IntPtr.Zero)
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "The status bar could not reserve monitor work area.");
+                throw new InvalidOperationException(
+                    "Windows rejected status bar registration (ABM_NEW returned false; the window may already be registered).");
             }
 
             _appBarRegistered = true;
@@ -233,8 +233,7 @@ internal sealed class StatusBarWindow : Window
                 Right = monitorBounds.Right,
                 Top = edge == AppBarEdgeTop ? monitorBounds.Top : monitorBounds.Bottom - barHeight,
                 Bottom = edge == AppBarEdgeTop ? monitorBounds.Top + barHeight : monitorBounds.Bottom
-            },
-            Monitor = monitor
+            }
         };
         _ = SHAppBarMessage(AppBarQueryPosition, ref data);
         if (edge == AppBarEdgeTop)
@@ -409,7 +408,6 @@ internal sealed class StatusBarWindow : Window
         public uint Edge;
         public NativeRect Bounds;
         public IntPtr Parameter;
-        public IntPtr Monitor;
     }
 
     private delegate IntPtr SubclassProcedure(

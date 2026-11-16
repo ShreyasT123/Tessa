@@ -14,8 +14,6 @@ public sealed class PreferenceStore
 
     private static readonly string[] Modifiers = ["Alt", "Win", "Ctrl+Win", "Caps Lock"];
 
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
-
     public async Task<TessellationPreferences> LoadAsync(CancellationToken cancellationToken = default)
     {
         if (!File.Exists(SettingsPath))
@@ -26,6 +24,7 @@ public sealed class PreferenceStore
         await using var stream = File.OpenRead(SettingsPath);
         var preferences = await JsonSerializer.DeserializeAsync<TessellationPreferences>(
             stream,
+            PreferenceJsonContext.Default.TessellationPreferences,
             cancellationToken: cancellationToken);
 
         if (preferences is null)
@@ -58,7 +57,11 @@ public sealed class PreferenceStore
                 bufferSize: 4096,
                 useAsync: true))
             {
-                await JsonSerializer.SerializeAsync(stream, preferences, JsonOptions, cancellationToken);
+                await JsonSerializer.SerializeAsync(
+                    stream,
+                    preferences,
+                    PreferenceJsonContext.Default.TessellationPreferences,
+                    cancellationToken);
             }
 
             File.Move(temporaryPath, SettingsPath, overwrite: true);

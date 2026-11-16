@@ -85,7 +85,10 @@ test project, and the settings UI is not yet a full Astur settings editor.
 
 #### P0.2 Build a testable core
 
-- Add a test project for pure geometry and preference behavior.
+- Added a test project covering all six layouts across small positive and
+  negative-coordinate work areas, zero-window behavior, scrolling offsets,
+  preference validation, and narrow-area fallbacks. Persistence migrations and
+  broader geometry/lifecycle cases remain.
 - Test every layout with zero/one/many windows, narrow work areas, gaps at their
   limits, negative-coordinate monitors, and odd dimensions.
 - Extract/manage state transitions behind testable interfaces where that
@@ -188,8 +191,9 @@ reference areas are `main.rs`'s status-bar implementation and
   state (click cycles layouts), and clock.
 - Settings now control the bar edge (top/bottom) and logical height; height is
   scaled per monitor's DPI and the selected edge remains reserved for tiles.
-- Validate the appbar handshake and restoration against the Windows taskbar,
-  other appbars, Explorer restarts, monitor hot-plug, and mixed-DPI displays.
+- The Win32 `APPBARDATA` definition now matches the documented structure;
+  validate reservation and restoration against the Windows taskbar, other
+  appbars, Explorer restarts, monitor hot-plug, and mixed-DPI displays.
 - Add monitor selection, theme, styling, and accessibility options.
 - Make the current left/center/right zones configurable widget lists.
 - Workspace pills: icons, optional app icons, hover state, and active-pill
