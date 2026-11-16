@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="Tessy_UI.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:Tessy_UI"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+    <Grid Background="#0E1117">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="240" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Background="#141922" BorderBrush="#252D3A" BorderThickness="0,0,1,0">
+            <Grid Padding="22,28">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Border Width="38" Height="38" CornerRadius="12" Background="#4667F5">
+                        <FontIcon Glyph="&#xE7F4;" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center" Spacing="1">
+                        <TextBlock Text="Tessellation" FontSize="16" FontWeight="SemiBold" Foreground="#F3F5FA" />
+                        <TextBlock Text="WINDOW MANAGER" FontSize="9" CharacterSpacing="120" Foreground="#8590A3" />
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Row="1" Margin="0,46,0,0" Spacing="8">
+                    <TextBlock Text="WORKSPACE" FontSize="10" CharacterSpacing="120" Foreground="#758096" Margin="10,0,0,8" />
+                    <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Background="#202A42" Foreground="#FFFFFF" Padding="12,10" CornerRadius="8">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <FontIcon Glyph="&#xE713;" FontSize="15" />
+                            <TextBlock Text="General settings" FontSize="13" />
+                        </StackPanel>
+                    </Button>
+                    <TextBlock Text="More sections will appear as the engine is ported." TextWrapping="Wrap" FontSize="11" Foreground="#778296" Margin="10,8,10,0" />
+                </StackPanel>
+
+                <Border Grid.Row="2" Background="#1B222E" CornerRadius="10" Padding="12">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="ENGINE STATUS" FontSize="9" CharacterSpacing="120" Foreground="#758096" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Ellipse Width="7" Height="7" Fill="#E3A84B" VerticalAlignment="Center" />
+                            <TextBlock Text="Core tiling controls" FontSize="12" Foreground="#D7DCE7" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel MaxWidth="1040" HorizontalAlignment="Left" Padding="44,34,44,48" Spacing="24">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="GENERAL SETTINGS" FontSize="10" CharacterSpacing="140" Foreground="#8190A8" />
+                    <TextBlock Text="Shape your workspace" FontSize="30" FontWeight="SemiBold" Foreground="#F3F5FA" />
+                    <TextBlock Text="Choose how windows are arranged and how you control Tessellation." FontSize="14" Foreground="#A1AABD" />
+                </StackPanel>
+
+                <InfoBar x:Name="ErrorInfoBar" IsOpen="False" Severity="Error" Title="Could not save preferences" IsClosable="True" />
+
+                <Border Background="#171E29" BorderBrush="#273142" BorderThickness="1" CornerRadius="12" Padding="18">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border Width="40" Height="40" CornerRadius="12" Background="#202C43">
+                            <FontIcon Glyph="&#xE8D4;" Foreground="#90A9FF" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
+                            <TextBlock x:Name="EngineStatusText" Text="Window manager stopped" FontSize="14" FontWeight="SemiBold" Foreground="#E8ECF4" />
+                            <TextBlock x:Name="EngineDetailText" Text="Start to arrange visible windows. A per-monitor status bar shows workspace occupancy, layout, focused window, and clock. Press the selected main modifier + T to toggle tiling." FontSize="12" Foreground="#929DB0" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Button x:Name="StartEngineButton" Content="Start tiling" Click="StartEngine_Click" />
+                            <Button x:Name="StopEngineButton" Content="Stop" Click="StopEngine_Click" IsEnabled="False" />
+                            <Button x:Name="TileNowButton" Content="Tile now" Click="TileNow_Click" IsEnabled="False" />
+                            <Button x:Name="ScrollBackButton" Content="Scroll back" Click="ScrollBack_Click" IsEnabled="False" />
+                            <Button x:Name="ScrollForwardButton" Content="Scroll forward" Click="ScrollForward_Click" IsEnabled="False" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                <TextBlock x:Name="SaveStateText" Text="Loading preferences..." FontSize="11" Foreground="#8F9AB0" HorizontalAlignment="Right" />
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="WORKSPACES · ALSO AVAILABLE FROM THE DESKTOP STATUS BAR" FontSize="10" CharacterSpacing="120" Foreground="#8190A8" />
+                        <TextBlock x:Name="ActiveWorkspaceText" Text="Active: 1" FontSize="10" Foreground="#91A9FF" />
+                    </StackPanel>
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="WorkspaceButtonsPanel" Orientation="Horizontal" Spacing="6" />
+                    </ScrollViewer>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Workspace names (one per line, in workspace order)" FontSize="11" Foreground="#929DB0" />
+                        <TextBox x:Name="WorkspaceNamesTextBox" AcceptsReturn="True" MinHeight="72" MaxHeight="120" TextWrapping="Wrap" PlaceholderText="Code&#x0a;Web&#x0a;Chat" TextChanged="WorkspaceNames_TextChanged" />
+                        <ToggleSwitch x:Name="StatusBarWheelWorkspaceSwitch" Header="Mouse wheel over the status bar cycles workspaces" OnContent="On" OffContent="Off" Toggled="StatusBarWheelWorkspace_Toggled" />
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Spacing="12">
+                    <StackPanel Spacing="3">
+                        <TextBlock Text="Window layout" FontSize="18" FontWeight="SemiBold" Foreground="#F3F5FA" />
+                        <TextBlock Text="Select the default arrangement for windows on a workspace." FontSize="12" Foreground="#929DB0" />
+                    </StackPanel>
+
+                    <Grid ColumnSpacing="12" RowSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <RadioButton x:Name="DwindleRadio" Grid.Column="0" Grid.Row="0" Tag="dwindle" Checked="Layout_Checked" GroupName="Layout" Padding="0">
+                            <Border Width="210" MinHeight="116" Background="#171E29" BorderBrush="#34435F" BorderThickness="1" CornerRadius="10" Padding="14">
+                                <StackPanel Spacing="8">
+                                    <FontIcon Glyph="&#xE8A7;" Foreground="#91A9FF" FontSize="18" />
+                                    <TextBlock Text="Dwindle" FontSize="14" FontWeight="SemiBold" Foreground="#F3F5FA" />
+                                    <TextBlock Text="A spiral of progressively smaller tiles." FontSize="11" Foreground="#929DB0" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </RadioButton>
+                        <RadioButton x:Name="MasterRadio" Grid.Column="1" Grid.Row="0" Tag="master" Checked="Layout_Checked" GroupName="Layout" Padding="0">
+                            <Border Width="210" MinHeight="116" Background="#171E29" BorderBrush="#273142" BorderThickness="1" CornerRadius="10" Padding="14">
+                                <StackPanel Spacing="8">
+                                    <FontIcon Glyph="&#xE8A7;" Foreground="#91A9FF" FontSize="18" />
+                                    <TextBlock Text="Master" FontSize="14" FontWeight="SemiBold" Foreground="#F3F5FA" />
+                                    <TextBlock Text="One primary window beside a stack." FontSize="11" Foreground="#929DB0" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </RadioButton>
+                        <RadioButton x:Name="ColumnsRadio" Grid.Column="2" Grid.Row="0" Tag="columns" Checked="Layout_Checked" GroupName="Layout" Padding="0">
+                            <Border Width="210" MinHeight="116" Background="#171E29" BorderBrush="#273142" BorderThickness="1" CornerRadius="10" Padding="14">
+                                <StackPanel Spacing="8">
+                                    <FontIcon Glyph="&#xE8A7;" Foreground="#91A9FF" FontSize="18" />
+                                    <TextBlock Text="Columns" FontSize="14" FontWeight="SemiBold" Foreground="#F3F5FA" />
+                                    <TextBlock Text="Equal-width vertical columns." FontSize="11" Foreground="#929DB0" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </RadioButton>
+                        <RadioButton x:Name="GridRadio" Grid.Column="0" Grid.Row="1" Tag="grid" Checked="Layout_Checked" GroupName="Layout" Padding="0">
+                            <Border Width="210" MinHeight="116" Background="#171E29" BorderBrush="#273142" BorderThickness="1" CornerRadius="10" Padding="14">
+                                <StackPanel Spacing="8">
+                                    <FontIcon Glyph="&#xE8A7;" Foreground="#91A9FF" FontSize="18" />
+                                    <TextBlock Text="Grid" FontSize="14" FontWeight="SemiBold" Foreground="#F3F5FA" />
+                                    <TextBlock Text="A balanced grid that adapts to window count." FontSize="11" Foreground="#929DB0" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </RadioButton>
+                        <RadioButton x:Name="MonocleRadio" Grid.Column="1" Grid.Row="1" Tag="monocle" Checked="Layout_Checked" GroupName="Layout" Padding="0">
+                            <Border Width="210" MinHeight="116" Background="#171E29" BorderBrush="#273142" BorderThickness="1" CornerRadius="10" Padding="14">
+                                <StackPanel Spacing="8">
+                                    <FontIcon Glyph="&#xE8A7;" Foreground="#91A9FF" FontSize="18" />
+                                    <TextBlock Text="Monocle" FontSize="14" FontWeight="SemiBold" Foreground="#F3F5FA" />
+                                    <TextBlock Text="Show one window at a time, full-screen." FontSize="11" Foreground="#929DB0" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </RadioButton>
+                        <RadioButton x:Name="ScrollingRadio" Grid.Column="2" Grid.Row="1" Tag="scrolling" Checked="Layout_Checked" GroupName="Layout" Padding="0">
+                            <Border Width="210" MinHeight="116" Background="#171E29" BorderBrush="#273142" BorderThickness="1" CornerRadius="10" Padding="14">
+                                <StackPanel Spacing="8">
+                                    <FontIcon Glyph="&#xE8A7;" Foreground="#91A9FF" FontSize="18" />
+                                    <TextBlock Text="Scrolling" FontSize="14" FontWeight="SemiBold" Foreground="#F3F5FA" />
+                                    <TextBlock Text="A horizontally scrolling strip of columns." FontSize="11" Foreground="#929DB0" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </RadioButton>
+                    </Grid>
+                </StackPanel>
+
+                <StackPanel Spacing="12">
+                    <StackPanel Spacing="3">
+                        <TextBlock Text="Behavior" FontSize="18" FontWeight="SemiBold" Foreground="#F3F5FA" />
+                        <TextBlock Text="Set your modifier, workspace count, and window spacing." FontSize="12" Foreground="#929DB0" />
+                    </StackPanel>
+
+                    <Border Background="#171E29" BorderBrush="#273142" BorderThickness="1" CornerRadius="12" Padding="18">
+                        <Grid ColumnSpacing="28" RowSpacing="20">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Column="0" Grid.Row="0" Spacing="6">
+                                <TextBlock Text="Main modifier" FontSize="12" FontWeight="SemiBold" Foreground="#DCE2ED" />
+                                <ComboBox x:Name="MainModifierCombo" SelectedIndex="0" SelectionChanged="MainModifier_SelectionChanged" MinWidth="190">
+                                    <ComboBoxItem Content="Alt" />
+                                    <ComboBoxItem Content="Win" />
+                                    <ComboBoxItem Content="Ctrl+Win" />
+                                    <ComboBoxItem Content="Caps Lock" />
+                                </ComboBox>
+                                <TextBlock Text="Used with Tessellation shortcuts." FontSize="10" Foreground="#8590A3" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Grid.Row="0" Spacing="6">
+                                <TextBlock Text="Virtual workspaces" FontSize="12" FontWeight="SemiBold" Foreground="#DCE2ED" />
+                                <NumberBox x:Name="WorkspaceCountBox" Minimum="1" Maximum="20" SpinButtonPlacementMode="Inline" Value="9" ValueChanged="WorkspaceCount_ValueChanged" />
+                                <TextBlock Text="Choose between 1 and 20 workspaces." FontSize="10" Foreground="#8590A3" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="0" Grid.Row="1" Spacing="6">
+                                <TextBlock Text="Outer gap" FontSize="12" FontWeight="SemiBold" Foreground="#DCE2ED" />
+                                <Slider x:Name="OuterGapSlider" Minimum="0" Maximum="64" StepFrequency="1" Value="8" ValueChanged="OuterGap_ValueChanged" />
+                                <TextBlock x:Name="OuterGapText" Text="8 px" FontSize="10" Foreground="#8590A3" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Grid.Row="1" Spacing="6">
+                                <TextBlock Text="Inner gap" FontSize="12" FontWeight="SemiBold" Foreground="#DCE2ED" />
+                                <Slider x:Name="InnerGapSlider" Minimum="0" Maximum="64" StepFrequency="1" Value="8" ValueChanged="InnerGap_ValueChanged" />
+                                <TextBlock x:Name="InnerGapText" Text="8 px" FontSize="10" Foreground="#8590A3" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="0" Grid.Row="2" Spacing="4">
+                                <TextBlock Text="Focus follows mouse" FontSize="12" FontWeight="SemiBold" Foreground="#DCE2ED" />
+                                <TextBlock Text="Focus an eligible window after the pointer rests over it briefly." FontSize="10" Foreground="#8590A3" />
+                            </StackPanel>
+                            <ToggleSwitch x:Name="FocusFollowsMouseSwitch" Grid.Column="1" Grid.Row="2" OnContent="On" OffContent="Off" HorizontalAlignment="Right" Toggled="FocusFollowsMouse_Toggled" />
+
+                            <StackPanel Grid.Column="0" Grid.Row="3" Spacing="6">
+                                <TextBlock Text="Window glide duration" FontSize="12" FontWeight="SemiBold" Foreground="#DCE2ED" />
+                                <Slider x:Name="AnimationDurationSlider" Minimum="0" Maximum="250" StepFrequency="10" Value="140" ValueChanged="AnimationDuration_ValueChanged" />
+                                <TextBlock x:Name="AnimationDurationText" Text="140 ms" FontSize="10" Foreground="#8590A3" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1" Grid.Row="3" Text="0 ms turns window animation off." FontSize="10" Foreground="#8590A3" VerticalAlignment="Center" />
+
+                            <StackPanel Grid.Column="0" Grid.Row="4" Spacing="4">
+                                <TextBlock Text="Start with Windows" FontSize="12" FontWeight="SemiBold" Foreground="#DCE2ED" />
+                                <TextBlock Text="Launch quietly to the system tray when you sign in." FontSize="10" Foreground="#8590A3" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <ToggleSwitch x:Name="StartWithWindowsSwitch" Grid.Column="1" Grid.Row="4" OnContent="On" OffContent="Off" HorizontalAlignment="Right" Toggled="StartWithWindows_Toggled" />
+
+                            <StackPanel Grid.Column="0" Grid.Row="5" Spacing="6">
+                                <TextBlock Text="Master pane width" FontSize="12" FontWeight="SemiBold" Foreground="#DCE2ED" />
+                                <Slider x:Name="MasterRatioSlider" Minimum="0.25" Maximum="0.75" StepFrequency="0.05" Value="0.55" ValueChanged="MasterRatio_ValueChanged" />
+                                <TextBlock x:Name="MasterRatioText" Text="55%" FontSize="10" Foreground="#8590A3" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1" Grid.Row="5" Text="Alt+H/L adjusts master width; Alt+M promotes; Alt+F toggles float." FontSize="10" Foreground="#8590A3" VerticalAlignment="Center" TextWrapping="Wrap" />
+
+                            <StackPanel Grid.Column="0" Grid.Row="6" Spacing="6">
+                                <TextBlock Text="Scrolling column width" FontSize="12" FontWeight="SemiBold" Foreground="#DCE2ED" />
+                                <Slider x:Name="ScrollColumnWidthSlider" Minimum="0.1" Maximum="1" StepFrequency="0.05" Value="0.5" ValueChanged="ScrollColumnWidth_ValueChanged" />
+                                <TextBlock x:Name="ScrollColumnWidthText" Text="50%" FontSize="10" Foreground="#8590A3" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1" Grid.Row="6" Text="In Scrolling layout, Alt+H/L adjusts width, Alt+M fills the screen, and Alt+R cycles presets. Alt+Arrow focuses adjacent columns." FontSize="10" Foreground="#8590A3" VerticalAlignment="Center" TextWrapping="Wrap" />
+
+                            <StackPanel Grid.Column="0" Grid.Row="7" Spacing="6">
+                                <TextBlock Text="Status bar edge" FontSize="12" FontWeight="SemiBold" Foreground="#DCE2ED" />
+                                <ComboBox x:Name="StatusBarPositionCombo" SelectionChanged="StatusBarPosition_SelectionChanged">
+                                    <ComboBoxItem Content="Top" />
+                                    <ComboBoxItem Content="Bottom" />
+                                </ComboBox>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Grid.Row="7" Spacing="6">
+                                <TextBlock Text="Status bar height" FontSize="12" FontWeight="SemiBold" Foreground="#DCE2ED" />
+                                <Slider x:Name="StatusBarHeightSlider" Minimum="24" Maximum="64" StepFrequency="2" Value="40" ValueChanged="StatusBarHeight_ValueChanged" />
+                                <TextBlock x:Name="StatusBarHeightText" Text="40 px" FontSize="10" Foreground="#8590A3" />
+                                <TextBlock Text="The chosen edge is reserved for tiling on every monitor." FontSize="10" Foreground="#8590A3" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Border Background="#171E29" BorderBrush="#273142" BorderThickness="1" CornerRadius="12" Padding="18">
+                        <Grid ColumnSpacing="20">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Alt-drag window movement" FontSize="12" FontWeight="SemiBold" Foreground="#DCE2ED" />
+                                <TextBlock Text="Move and resize windows by dragging them with the main modifier." FontSize="10" Foreground="#8590A3" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <ToggleSwitch x:Name="AltDragSwitch" Grid.Column="1" OnContent="On" OffContent="Off" VerticalAlignment="Center" Toggled="AltDrag_Toggled" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Changes save automatically to your local app settings." FontSize="11" Foreground="#78859A" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Content="Restore defaults" Click="Reset_Click" />
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

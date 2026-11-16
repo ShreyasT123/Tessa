@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="Tessellation.Configuration/Tessellation.Configuration.csproj" />
+  <Project Path="Tessellation.Core/Tessellation.Core.csproj" />
+  <Project Path="Tessellation.Input/Tessellation.Input.csproj" />
+  <Project Path="Tessellation.Platform.Windows/Tessellation.Platform.Windows.csproj" />
+  <Project Path="Tessy.UI/Tessy.UI.csproj">
+    <Platform Project="x86" />
+  </Project>
+</Solution>

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Tessy.UI (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Tessy.UI (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

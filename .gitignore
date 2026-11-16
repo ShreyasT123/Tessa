@@ -1,0 +1,95 @@
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vscode/
+# Build outputs
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+[Aa]rtifacts/
+x64/
+x86/
+ARM/
+ARM64/
+Win32/
+
+# Visual Studio generated files
+Generated\ Files/
+*.VC.db
+*.VC.VC.opendb
+*.pdb
+*.ilk
+*.obj
+*.pch
+*.idb
+*.tlog/
+*.lastbuildstate
+obj/
+bin/
+# NuGet
+packages/
+*.nupkg
+*.snupkg
+.nuget/
+tmp/
+# WinUI / Windows App SDK
+AppPackages/
+BundleArtifacts/
+Package.StoreAssociation.xml
+_pkginfo.txt
+*.msix
+*.msixbundle
+*.appx
+*.appxbundle
+*.appinstaller
+
+# Generated code
+*.g.cs
+*.g.i.cs
+*.xaml.g.cs
+*.xbf
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.bin/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.cache
+
+# User-specific settings
+*.user
+*.sln.ide
+
+# VS Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Rider
+.idea/
+
+# Resharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+
+# Publish profiles (may contain credentials)
+*.pubxml.user
+
+# Local environment files
+.env
+.env.*
+!.env.example
