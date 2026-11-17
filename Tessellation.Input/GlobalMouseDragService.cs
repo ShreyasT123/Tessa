@@ -121,8 +121,11 @@ public sealed class GlobalMouseDragService
         _isStopping = false;
         _barWheelRemainder = 0;
         _lastFocusRequestAt = DateTime.MinValue;
+        // Only the newest pointer position matters while dragging. Keeping one slot lets
+        // a burst of hook messages coalesce instead of replaying stale positions, which
+        // looked like lag and jitter in the dragged window.
         _commands = Channel.CreateBounded<DragCommand>(
-            new BoundedChannelOptions(32)
+            new BoundedChannelOptions(1)
             {
                 SingleReader = true,
                 SingleWriter = true,

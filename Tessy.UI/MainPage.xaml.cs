@@ -18,6 +18,8 @@ namespace Tessy_UI;
 /// </summary>
 public sealed partial class MainPage : Page
 {
+    private static readonly TimeSpan StructureRetileDelay = TimeSpan.FromMilliseconds(90);
+    private static readonly TimeSpan GeometryRetileDelay = TimeSpan.FromMilliseconds(450);
     private readonly PreferenceStore _preferenceStore = new();
     private readonly StartupRegistrationService _startupRegistrationService = new();
     private readonly WindowTilingService _windowTilingService = new();
@@ -32,6 +34,8 @@ public sealed partial class MainPage : Page
     private string? _registeredModifier;
     private bool _registeredStartWithWindows;
     private bool _isLoading;
+    private bool _isUserMovingOrSizing;
+    private bool _retilePending;
 
     public MainPage()
     {
@@ -52,6 +56,7 @@ public sealed partial class MainPage : Page
         _statusBarTimer.IsRepeating = true;
         _statusBarTimer.Tick += StatusBarTimer_Tick;
         _windowTilingService.AnimationFailed += ReportHotkeyFailure;
+        _windowTilingService.LayoutSettled += OnLayoutSettled;
     }
 
     public event Action<bool>? StartupCompleted;
@@ -589,6 +594,8 @@ public sealed partial class MainPage : Page
                 ReportHotkeyFailure);
             _registeredModifier = _preferences.MainModifier;
             _windowEventMonitor.Start(QueueAutoRetile);
+            _isUserMovingOrSizing = false;
+            _retilePending = false;
             if (_preferences.AltDrag ||
                 _preferences.FocusFollowsMouse ||
                 (_preferences.StatusBarWheelWorkspace && _preferences.WorkspaceCount > 1))
@@ -681,6 +688,8 @@ public sealed partial class MainPage : Page
         var failures = new List<Exception>();
         _retileTimer.Stop();
         _statusBarTimer.Stop();
+        _isUserMovingOrSizing = false;
+        _retilePending = false;
         _globalMouseDragService.UpdateStatusBarWheel(null, []);
 
         try
@@ -747,6 +756,8 @@ public sealed partial class MainPage : Page
     {
         _retileTimer.Stop();
         _statusBarTimer.Stop();
+        _isUserMovingOrSizing = false;
+        _retilePending = false;
         _globalMouseDragService.UpdateStatusBarWheel(null, []);
         var failures = new List<Exception>();
 
@@ -1129,17 +1140,84 @@ public sealed partial class MainPage : Page
         return workspace.ToString("00");
     }
 
-    private void QueueAutoRetile()
+    private void QueueAutoRetile(WindowChangeKind kind)
+    {
+        if (DispatcherQueue.HasThreadAccess)
+        {
+            HandleWindowChange(kind);
+            return;
+        }
+
+        _ = DispatcherQueue.TryEnqueue(() => HandleWindowChange(kind));
+    }
+
+    private void HandleWindowChange(WindowChangeKind kind)
+    {
+        if (!_windowTilingService.IsRunning)
+        {
+            return;
+        }
+
+        if (kind == WindowChangeKind.MoveSizeStarted)
+        {
+            // The user is dragging or resizing a window with the mouse. Retiling in the
+            // middle of that gesture fights the pointer and is the main source of the
+            // visible jitter, so wait until the gesture ends.
+            _isUserMovingOrSizing = true;
+            _retileTimer.Stop();
+            return;
+        }
+
+        if (kind == WindowChangeKind.MoveSizeEnded)
+        {
+            _isUserMovingOrSizing = false;
+            _retilePending = false;
+            ScheduleRetile(StructureRetileDelay);
+            return;
+        }
+
+        if (_isUserMovingOrSizing)
+        {
+            // MOVESIZEEND is what resumes tiling. If it were ever lost, the next
+            // move/size gesture ends with another MOVESIZEEND, so this cannot latch.
+            return;
+        }
+
+        if (kind == WindowChangeKind.Geometry &&
+            (_windowTilingService.IsArranging || _windowTilingService.MillisecondsSinceLastPlacement < 250))
+        {
+            // Our own layout animation reports geometry changes for every frame. Ignoring
+            // them breaks the retile feedback loop that made the tiles crawl and jitter.
+            return;
+        }
+
+        if (_windowTilingService.IsArranging)
+        {
+            _retilePending = true;
+            return;
+        }
+
+        ScheduleRetile(kind == WindowChangeKind.Geometry ? GeometryRetileDelay : StructureRetileDelay);
+    }
+
+    private void ScheduleRetile(TimeSpan delay)
+    {
+        _retileTimer.Stop();
+        _retileTimer.Interval = delay;
+        _retileTimer.Start();
+    }
+
+    private void OnLayoutSettled()
     {
         _ = DispatcherQueue.TryEnqueue(() =>
         {
-            if (!_windowTilingService.IsRunning)
+            if (!_retilePending || _isUserMovingOrSizing || !_windowTilingService.IsRunning)
             {
                 return;
             }
 
-            _retileTimer.Stop();
-            _retileTimer.Start();
+            _retilePending = false;
+            ScheduleRetile(StructureRetileDelay);
         });
     }
 
@@ -1151,6 +1229,20 @@ public sealed partial class MainPage : Page
             return;
         }
 
+        if (_isUserMovingOrSizing)
+        {
+            _retilePending = true;
+            return;
+        }
+
+        if (_windowTilingService.IsArranging)
+        {
+            _retilePending = true;
+            ScheduleRetile(TimeSpan.FromMilliseconds(60));
+            return;
+        }
+
+        _retilePending = false;
         try
         {
             var count = _windowTilingService.TileNow();

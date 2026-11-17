@@ -16,6 +16,15 @@
     <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!--
+      Tessy is a plain, unpackaged desktop app. If WindowsPackageType is left at
+      its MSIX default, a published exe waits for package identity and exits
+      before showing a window. WindowsAppSDKSelfContained also copies the
+      Windows App SDK runtime next to the exe so it runs without a machine-wide
+      runtime install.
+    -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
   </PropertyGroup>
 
   <ItemGroup>
@@ -44,12 +53,10 @@
   </ItemGroup>
 
   <!--
-    Microsoft.Windows.SDK.BuildTools.WinApp adds first-class support for
-    `dotnet run` on packaged WinUI apps: it hooks the .NET CLI Run target to
-    register a debug identity via the winapp CLI and launch the app with
-    package identity (AUMID).
-    Set <EnableWinAppRunSupport>false</EnableWinAppRunSupport> in a
-    <PropertyGroup> above to opt out.
+    Microsoft.Windows.SDK.BuildTools.WinApp adds the WinApp CLI build/run
+    integration used by `dotnet run`. Because WindowsPackageType is None the
+    app runs unpackaged; Package.appxmanifest is kept for optional MSIX
+    packaging through the WinApp CLI.
   -->
   <ItemGroup>
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2957" />
@@ -76,7 +83,10 @@
   <PropertyGroup>
     <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
     <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
-    <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
-    <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
+    <!--
+      WinUI 3 relies on reflection and XAML type metadata; trimmed publishes start
+      and then fail before the first window appears.
+    -->
+    <PublishTrimmed>False</PublishTrimmed>
   </PropertyGroup>
 </Project>

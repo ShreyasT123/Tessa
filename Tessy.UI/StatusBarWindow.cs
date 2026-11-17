@@ -63,6 +63,13 @@ internal sealed class StatusBarWindow : Window
     private bool _appBarRegistered;
     private bool _hasPositioned;
     private bool _closed;
+    private string _shownTitle = string.Empty;
+    private string _shownLayout = string.Empty;
+    private string _shownClock = string.Empty;
+    private int _shownActiveWorkspace = -1;
+    private int[] _shownOccupied = [];
+    private string[] _shownNames = [];
+    private bool _shownWheelWorkspace;
     private IntPtr _placedMonitor;
     private RectI _placedBounds;
     private uint _placedDpi;
@@ -159,12 +166,31 @@ internal sealed class StatusBarWindow : Window
             status.StatusBarPosition,
             status.StatusBarHeight);
         UpdateWorkspaces(status);
-        _focusedTitle.Text = string.IsNullOrWhiteSpace(status.FocusedWindowTitle)
+
+        var title = string.IsNullOrWhiteSpace(status.FocusedWindowTitle)
             ? "Desktop"
             : status.FocusedWindowTitle;
-        _layoutButton.Content = $"{status.Layout}  ·  {(status.IsTilingEnabled ? "tiled" : "paused")}";
-        ToolTipService.SetToolTip(_layoutButton, "Click to cycle the window layout");
-        _clock.Text = DateTime.Now.ToString("ddd, MMM d  HH:mm");
+        if (!string.Equals(title, _shownTitle, StringComparison.Ordinal))
+        {
+            _shownTitle = title;
+            _focusedTitle.Text = title;
+        }
+
+        var layout = $"{status.Layout}  ·  {(status.IsTilingEnabled ? "tiled" : "paused")}";
+        if (!string.Equals(layout, _shownLayout, StringComparison.Ordinal))
+        {
+            _shownLayout = layout;
+            _layoutButton.Content = layout;
+            ToolTipService.SetToolTip(_layoutButton, "Click to cycle the window layout");
+        }
+
+        var clock = DateTime.Now.ToString("ddd, MMM d  HH:mm");
+        if (!string.Equals(clock, _shownClock, StringComparison.Ordinal))
+        {
+            _shownClock = clock;
+            _clock.Text = clock;
+        }
+
         return createdOrResized;
     }
 
@@ -193,6 +219,19 @@ internal sealed class StatusBarWindow : Window
 
         var barHeight = Math.Clamp((int)Math.Round((double)configuredHeight * dpi / 96d), 1, monitorBounds.Height);
         var edge = position == "bottom" ? AppBarEdgeBottom : AppBarEdgeTop;
+        if (_hasPositioned &&
+            _appBarRegistered &&
+            _placedMonitor == monitor &&
+            _placedBounds == monitorBounds &&
+            _placedDpi == dpi &&
+            _placedEdge == edge &&
+            _placedHeight == barHeight)
+        {
+            // Re-sending ABM_SETPOS on every timer tick makes Windows recompute the
+            // work area (and can nudge other windows) even though nothing changed.
+            return false;
+        }
+
         var requiresRetile = !_hasPositioned ||
                              _placedMonitor != monitor ||
                              _placedBounds != monitorBounds ||
@@ -282,6 +321,21 @@ internal sealed class StatusBarWindow : Window
 
     private void UpdateWorkspaces(MonitorStatusSnapshot status)
     {
+        var occupied = status.OccupiedWorkspaces;
+        if (_workspaceButtons.Count == status.WorkspaceCount &&
+            _shownActiveWorkspace == status.ActiveWorkspace &&
+            _shownWheelWorkspace == status.StatusBarWheelWorkspace &&
+            _shownOccupied.AsSpan().SequenceEqual(occupied is int[] array ? array : occupied.ToArray()) &&
+            _shownNames.AsSpan().SequenceEqual(status.WorkspaceNames.ToArray()))
+        {
+            return;
+        }
+
+        _shownActiveWorkspace = status.ActiveWorkspace;
+        _shownWheelWorkspace = status.StatusBarWheelWorkspace;
+        _shownOccupied = occupied.ToArray();
+        _shownNames = status.WorkspaceNames.ToArray();
+
         if (_workspaceButtons.Count != status.WorkspaceCount)
         {
             _workspaceButtons.Clear();
@@ -307,11 +361,11 @@ internal sealed class StatusBarWindow : Window
             }
         }
 
-        var occupied = status.OccupiedWorkspaces.ToHashSet();
+        var occupiedSet = occupied.ToHashSet();
         foreach (var (workspace, button) in _workspaceButtons)
         {
             var isActive = workspace == status.ActiveWorkspace;
-            var isOccupied = occupied.Contains(workspace);
+            var isOccupied = occupiedSet.Contains(workspace);
             var name = workspace <= status.WorkspaceNames.Count
                 ? status.WorkspaceNames[workspace - 1]
                 : string.Empty;

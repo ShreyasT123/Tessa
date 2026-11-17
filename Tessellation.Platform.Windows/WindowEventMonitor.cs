@@ -3,6 +3,37 @@ using System.Runtime.InteropServices;
 
 namespace Tessellation.Platform.Windows;
 
+/// <summary>
+/// Describes why <see cref="WindowEventMonitor"/> asked for a retile.
+/// </summary>
+public enum WindowChangeKind
+{
+    /// <summary>
+    /// A top-level window was created or destroyed.
+    /// </summary>
+    Structure,
+
+    /// <summary>
+    /// A top-level window was shown or hidden.
+    /// </summary>
+    Visibility,
+
+    /// <summary>
+    /// A top-level window moved or changed size.
+    /// </summary>
+    Geometry,
+
+    /// <summary>
+    /// The user started dragging or resizing a window with the mouse.
+    /// </summary>
+    MoveSizeStarted,
+
+    /// <summary>
+    /// The user finished dragging or resizing a window with the mouse.
+    /// </summary>
+    MoveSizeEnded
+}
+
 public sealed class WindowEventMonitor
 {
     private const uint EventObjectCreate = 0x8000;
@@ -10,13 +41,15 @@ public sealed class WindowEventMonitor
     private const uint EventObjectShow = 0x8002;
     private const uint EventObjectHide = 0x8003;
     private const uint EventObjectLocationChange = 0x800B;
+    private const uint EventSystemMoveSizeStart = 0x000A;
+    private const uint EventSystemMoveSizeEnd = 0x000B;
     private const uint WineventOutOfContext = 0x0000;
     private const int ObjectIdWindow = 0;
     private const int ChildIdSelf = 0;
 
     private readonly List<IntPtr> _hooks = [];
     private readonly WinEventProc _callback;
-    private Action? _onWindowChanged;
+    private Action<WindowChangeKind>? _onWindowChanged;
     private int _processId;
 
     public WindowEventMonitor()
@@ -26,7 +59,7 @@ public sealed class WindowEventMonitor
 
     public bool IsRunning => _hooks.Count > 0;
 
-    public void Start(Action onWindowChanged)
+    public void Start(Action<WindowChangeKind> onWindowChanged)
     {
         ArgumentNullException.ThrowIfNull(onWindowChanged);
         if (IsRunning)
@@ -38,11 +71,13 @@ public sealed class WindowEventMonitor
         _onWindowChanged = onWindowChanged;
         try
         {
-            Hook(EventObjectCreate);
-            Hook(EventObjectDestroy);
-            Hook(EventObjectShow);
-            Hook(EventObjectHide);
-            Hook(EventObjectLocationChange);
+            Hook(EventObjectCreate, EventObjectCreate);
+            Hook(EventObjectDestroy, EventObjectDestroy);
+            Hook(EventObjectShow, EventObjectShow);
+            Hook(EventObjectHide, EventObjectHide);
+            Hook(EventObjectLocationChange, EventObjectLocationChange);
+            Hook(EventSystemMoveSizeStart, EventSystemMoveSizeStart);
+            Hook(EventSystemMoveSizeEnd, EventSystemMoveSizeEnd);
         }
         catch
         {
@@ -62,11 +97,11 @@ public sealed class WindowEventMonitor
         }
     }
 
-    private void Hook(uint eventType)
+    private void Hook(uint eventMin, uint eventMax)
     {
         var hook = SetWinEventHook(
-            eventType,
-            eventType,
+            eventMin,
+            eventMax,
             IntPtr.Zero,
             _callback,
             0,
@@ -74,7 +109,7 @@ public sealed class WindowEventMonitor
             WineventOutOfContext);
         if (hook == IntPtr.Zero)
         {
-            throw new Win32Exception(Marshal.GetLastWin32Error(), $"Windows event hook 0x{eventType:X} could not be installed.");
+            throw new Win32Exception(Marshal.GetLastWin32Error(), $"Windows event hook 0x{eventMin:X} could not be installed.");
         }
 
         _hooks.Add(hook);
@@ -93,19 +128,32 @@ public sealed class WindowEventMonitor
         _ = eventThread;
         _ = eventTime;
 
-        if (window == IntPtr.Zero || objectId != ObjectIdWindow || childId != ChildIdSelf)
+        if (window == IntPtr.Zero)
         {
             return;
         }
 
-        _ = eventType;
+        if (eventType is not (EventSystemMoveSizeStart or EventSystemMoveSizeEnd) &&
+            (objectId != ObjectIdWindow || childId != ChildIdSelf))
+        {
+            return;
+        }
+
         GetWindowThreadProcessId(window, out var processId);
         if (processId == _processId)
         {
             return;
         }
 
-        _onWindowChanged?.Invoke();
+        var kind = eventType switch
+        {
+            EventObjectCreate or EventObjectDestroy => WindowChangeKind.Structure,
+            EventObjectShow or EventObjectHide => WindowChangeKind.Visibility,
+            EventSystemMoveSizeStart => WindowChangeKind.MoveSizeStarted,
+            EventSystemMoveSizeEnd => WindowChangeKind.MoveSizeEnded,
+            _ => WindowChangeKind.Geometry
+        };
+        _onWindowChanged?.Invoke(kind);
     }
 
     private List<Exception> UnhookAll()

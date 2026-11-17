@@ -18,6 +18,7 @@ public sealed class WindowTilingService
     private const uint SetWindowPosNoActivate = 0x0010;
     private const uint MonitorDefaultToNearest = 2;
     private const uint SetWindowPosAsync = 0x4000;
+    private const double AnimationFrameMilliseconds = 1000d / 60d;
     private readonly object _animationGate = new();
     private readonly WindowRestoreJournal _restoreJournal = new();
     private readonly Dictionary<IntPtr, NativeRect> _originalBounds = [];
@@ -32,6 +33,8 @@ public sealed class WindowTilingService
     private CancellationTokenSource? _animationCancellation;
     private Task _animationTask = Task.CompletedTask;
     private TessellationPreferences? _preferences;
+    private volatile bool _isArranging;
+    private long _lastPlacementAppliedAt;
     private bool _isRunning;
     private bool _tilingEnabled = true;
     private int _activeWorkspace = 1;
@@ -43,7 +46,23 @@ public sealed class WindowTilingService
 
     public int ActiveWorkspace => _activeWorkspace;
 
+    /// <summary>
+    /// Gets a value indicating whether the service is currently moving windows into their tiles.
+    /// </summary>
+    public bool IsArranging => _isArranging;
+
+    /// <summary>
+    /// Gets how long ago the last tile position was applied to a window. Used to ignore the
+    /// geometry notifications that our own layout changes generate.
+    /// </summary>
+    public long MillisecondsSinceLastPlacement => Environment.TickCount64 - Interlocked.Read(ref _lastPlacementAppliedAt);
+
     public event Action<Exception>? AnimationFailed;
+
+    /// <summary>
+    /// Raised after the service has finished moving windows into their tiles.
+    /// </summary>
+    public event Action? LayoutSettled;
 
     public IReadOnlyList<MonitorStatusSnapshot> GetMonitorStatus()
     {
@@ -853,6 +872,7 @@ public sealed class WindowTilingService
         }
 
         CancelAnimation();
+        _isArranging = false;
         RestoreOriginalBounds();
         foreach (var handle in _hiddenByWorkspace.ToArray())
         {
@@ -935,13 +955,25 @@ public sealed class WindowTilingService
 
         if (durationMs <= 0)
         {
-            ApplyPlacements(placements, SetWindowPosNoSizeOrder | SetWindowPosNoActivate);
+            _isArranging = true;
+            try
+            {
+                ApplyPlacements(placements, SetWindowPosNoSizeOrder | SetWindowPosNoActivate);
+                Interlocked.Exchange(ref _lastPlacementAppliedAt, Environment.TickCount64);
+            }
+            finally
+            {
+                _isArranging = false;
+            }
+
+            LayoutSettled?.Invoke();
             return;
         }
 
         var cancellation = new CancellationTokenSource();
         lock (_animationGate)
         {
+            _isArranging = true;
             _animationCancellation = cancellation;
             _animationTask = Task.Run(() => AnimatePlacements(placements, durationMs, cancellation.Token));
         }
@@ -955,16 +987,27 @@ public sealed class WindowTilingService
                     AnimationFailed?.Invoke(exception.GetBaseException());
                 }
 
+                var settled = false;
                 lock (_animationGate)
                 {
                     if (ReferenceEquals(_animationCancellation, cancellation))
                     {
                         _animationCancellation = null;
                         _animationTask = Task.CompletedTask;
+                        _isArranging = false;
+                        if (!task.IsCanceled)
+                        {
+                            Interlocked.Exchange(ref _lastPlacementAppliedAt, Environment.TickCount64);
+                            settled = true;
+                        }
                     }
                 }
 
                 cancellation.Dispose();
+                if (settled)
+                {
+                    LayoutSettled?.Invoke();
+                }
             },
             CancellationToken.None,
             TaskContinuationOptions.ExecuteSynchronously,
@@ -987,19 +1030,29 @@ public sealed class WindowTilingService
         catch (OperationCanceledException)
         {
         }
+        catch (Exception)
+        {
+            // The animation task already reported the failure through AnimationFailed;
+            // cancelling a layout must not surface it again to the caller.
+        }
     }
 
-    private static async Task AnimatePlacements(
+    private async Task AnimatePlacements(
         IReadOnlyList<Placement> placements,
         int durationMs,
         CancellationToken cancellationToken)
     {
+        // Task.Delay is only as accurate as the system timer, which defaults to ~15.6 ms.
+        // Raising the resolution to 1 ms while animating keeps the frame cadence steady
+        // instead of producing uneven 16/32 ms jumps.
+        using var timerResolution = new TimerResolutionScope();
         var stopwatch = Stopwatch.StartNew();
+        var frame = 0;
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var progress = Math.Clamp(stopwatch.Elapsed.TotalMilliseconds / durationMs, 0, 1);
-            var eased = progress * progress * (3 - 2 * progress);
+            var eased = EaseOutCubic(progress);
             foreach (var placement in placements)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -1017,12 +1070,37 @@ public sealed class WindowTilingService
                 }
             }
 
+            Interlocked.Exchange(ref _lastPlacementAppliedAt, Environment.TickCount64);
             if (progress >= 1)
             {
                 return;
             }
 
-            await Task.Delay(16, cancellationToken).ConfigureAwait(false);
+            frame++;
+            var wait = frame * AnimationFrameMilliseconds - stopwatch.Elapsed.TotalMilliseconds;
+            if (wait > 0.5)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(wait), cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private static double EaseOutCubic(double progress)
+    {
+        var remaining = 1 - Math.Clamp(progress, 0, 1);
+        return 1 - remaining * remaining * remaining;
+    }
+
+    private sealed class TimerResolutionScope : IDisposable
+    {
+        public TimerResolutionScope()
+        {
+            _ = timeBeginPeriod(1);
+        }
+
+        public void Dispose()
+        {
+            _ = timeEndPeriod(1);
         }
     }
 
@@ -1335,6 +1413,12 @@ public sealed class WindowTilingService
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmGetWindowAttribute(IntPtr window, int attribute, out int value, int size);
+
+    [DllImport("winmm.dll", EntryPoint = "timeBeginPeriod")]
+    private static extern uint timeBeginPeriod(uint period);
+
+    [DllImport("winmm.dll", EntryPoint = "timeEndPeriod")]
+    private static extern uint timeEndPeriod(uint period);
 }
 
 public sealed record MonitorStatusSnapshot(

@@ -29,7 +29,35 @@ public partial class App : Application
     /// </summary>
     public App()
     {
+        UnhandledException += (_, args) => LogCrash(args.Exception);
+        AppDomain.CurrentDomain.UnhandledException += (_, args) => LogCrash(args.ExceptionObject as Exception);
         InitializeComponent();
+    }
+
+    private static void LogCrash(Exception? exception)
+    {
+        if (exception is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var directory = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Tessellation");
+            Directory.CreateDirectory(directory);
+            File.AppendAllText(
+                System.IO.Path.Combine(directory, "crash.log"),
+                $"{DateTimeOffset.Now:O}{Environment.NewLine}{exception}{Environment.NewLine}{Environment.NewLine}");
+        }
+        catch (IOException)
+        {
+            // Crash logging must never mask the original failure.
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
     }
 
     /// <summary>

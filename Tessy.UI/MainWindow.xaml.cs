@@ -91,6 +91,9 @@ public sealed partial class MainWindow : Window
 
             _trayIconService.Dispose();
             _trayIconService.CloseApplication();
+            // CloseApplication only marks the window closable; the window still has to be
+            // closed for WinUI to shut down, otherwise the process lingers with no tray icon.
+            Close();
         }
         catch (Exception exception)
         {
